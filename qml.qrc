@@ -1,0 +1,8 @@
+<RCC>
+    <qresource prefix="/">
+        <file>main.qml</file>
+        <file>miniKanren.js</file>
+        <file>node.qml</file>
+        <file>tree.js</file>
+    </qresource>
+</RCC>
