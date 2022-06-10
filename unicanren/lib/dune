@@ -2,8 +2,6 @@
  (name unicanren)
  (modules lib lib_tests test_numbers)
  (libraries
-   base
-   js_of_ocaml
   ;GT
   )
  (instrumentation

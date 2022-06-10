@@ -1,0 +1,8 @@
+(executable
+ (public_name unicanren)
+ (name main)
+ (modes byte js)
+ (js_of_ocaml (flags --pretty))
+ (libraries unicanren)
+ (preprocess
+  (pps ppx_inline_test js_of_ocaml-ppx)))
