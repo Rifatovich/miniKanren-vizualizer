@@ -1,0 +1,8 @@
+(executable
+ (public_name unicanren)
+ (name main)
+ (modes byte js)
+ (js_of_ocaml (flags +base/runtime.js --pretty) (link_flags (:include test)))
+ (libraries unicanren base js_of_ocaml js_of_ocaml-toplevel)
+ (preprocess
+  (pps ppx_inline_test js_of_ocaml-ppx)))

@@ -1,0 +1,20 @@
+(library
+ (name unicanren)
+ (modules lib lib_tests test_numbers)
+ (libraries
+   base
+   js_of_ocaml
+  ;GT
+  )
+ (instrumentation
+  (backend bisect_ppx))
+ (preprocess
+  (pps
+   js_of_ocaml-ppx
+   ppx_inline_test
+   ppx_assert
+   ppx_expect
+   bisect_ppx
+   ;GT.ppx_all
+   ))
+ (inline_tests))
