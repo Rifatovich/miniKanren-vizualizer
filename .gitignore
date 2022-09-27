@@ -1,2 +1,8 @@
 .vscode
-miniKanren-vizualizer.pro.user
+*.user
+.qmake.stash
+qrc_*.cpp
+
+/miniKanren-vizualizer  # executable when out-of-source build is not used
+/Makefile
+

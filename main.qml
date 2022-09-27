@@ -2,7 +2,8 @@ import QtQuick 2.12
 import QtQuick.Window 2.12
 import QtQuick.Controls 2.12
 
-import "miniKanren.js" as MiniKanren
+import "helpers.js" as Helpers
+import "unicanren/_build/default/bin/main.bc.js" as MiniKanren
 import "tree.js" as T
 
 Window {
@@ -29,7 +30,7 @@ Window {
             if (tree)
                 tree.destroyNodes();
             tree = new T.Tree(canvas);
-            console.log(MiniKanren.runAppendo());
+            console.log(Helpers.runAppendo());
         }
     }
 
@@ -67,5 +68,13 @@ Window {
             height: 4000
             color: "#ffdc7a"
         }
+    }
+
+    Component.onCompleted: {
+
+//      console.log("MiniKanren = " + JSON.stringify(MiniKanren) );
+//      console.log("Helpers = " + JSON.stringify(Helpers) );
+//      console.log("Qt = " + JSON.stringify(Qt) );
+//      console.log( this );
     }
 }

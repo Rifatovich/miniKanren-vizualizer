@@ -1,8 +1,9 @@
 <RCC>
     <qresource prefix="/">
         <file>main.qml</file>
-        <file>miniKanren.js</file>
         <file>node.qml</file>
         <file>tree.js</file>
+        <file>helpers.js</file>
+        <file>unicanren/_build/default/bin/main.bc.js</file>
     </qresource>
 </RCC>
