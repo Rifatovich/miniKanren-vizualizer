@@ -18,6 +18,13 @@ module Term = struct
     | Cons (l, r) -> fprintf ppf "(cons %a %a)" pp l pp r
     | Nil -> fprintf ppf "'()"
   ;;
+
+  let rec pp1 = function
+    | Var s -> s
+    | Symbol s -> s
+    | Cons (l, r) -> "Cons of (" ^ pp1 l ^ ", " ^ pp1 r ^ ")"
+    | Nil -> "'()"
+  ;;
 end
 
 open Term
@@ -91,8 +98,8 @@ module Value = struct
   let rec walk subst : t -> t = function
     | Var v ->
       (match Subst.find v subst with
-      | exception Not_found -> Var v
-      | t2 -> walk subst t2)
+       | exception Not_found -> Var v
+       | t2 -> walk subst t2)
     | Symbol s -> Symbol s
     | Cons (l, r) -> cons (walk subst l) (walk subst r)
     | Nil -> Nil
@@ -220,7 +227,7 @@ end = struct
 
   let ( <*> ) f x st =
     Result.bind (f st) (fun (st, f) ->
-        Result.bind (x st) (fun (st, x) -> Result.Ok (st, f x)))
+      Result.bind (x st) (fun (st, x) -> Result.Ok (st, f x)))
   ;;
 
   let ( >>= ) = bind
@@ -367,6 +374,14 @@ module Stream = struct
   ;;
 end
 
+let termSum l =
+  let rec aux acc = function
+    | [] -> acc
+    | h :: t -> aux (Cons (acc, h)) t
+  in
+  aux Nil l
+;;
+
 let next_logic_var =
   let last = ref 10 in
   fun () ->
@@ -375,7 +390,7 @@ let next_logic_var =
 ;;
 
 let ender x =
-  Js.Unsafe.global##.endf();
+  Js.Unsafe.global##.endf ();
   x
 ;;
 
@@ -386,38 +401,44 @@ let eval ?(trace_svars = false) ?(trace_uni = false) ?(trace_calls = false) =
   let rec eval root : (st, subst Stream.t) StateMonad.t =
     match root with
     | TraceSVars xs ->
-      Js.Unsafe.global##.anyf("TraceSVars");
+      Js.Unsafe.global##.anyf "TraceSVars";
       let* { svars; lvars = subst } = read in
       if trace_svars
       then
         Format.printf
           "  TRACING: %a\n%!"
           (pp_print_list ~pp_sep:pp_print_space (fun ppf name ->
-               fprintf
-                 ppf
-                 "%s = %a;"
-                 name
-                 Value.pp
-                 (Value.walk subst (VarsMap.find name svars))))
+             fprintf
+               ppf
+               "%s = %a;"
+               name
+               Value.pp
+               (Value.walk subst (VarsMap.find name svars))))
           xs;
       return (Stream.return subst)
     | Unify (l, r) ->
-      Js.Unsafe.global##.unifyf([l, r]);
       let* l = eval_term l in
       let* r = eval_term r in
+      Js.Unsafe.global##.unifyf (Js.string (asprintf "%a and %a" Value.pp l Value.pp r));
       let* ({ State.lvars } as st) = read in
       let ppw = Value.ppw lvars in
-      ender (match unify lvars l r with
-      | None ->
-        if trace_uni then printf "\tUni-FAILED of `%a` and `%a`\n" ppw l ppw r;
-        return Stream.nil
-      | Some subst2 ->
-        if trace_uni then printf "\tUnificated `%a` and `%a`\n" ppw l ppw r;
-        let* () = put { st with lvars = subst2 } in
-        return (Stream.return subst2))
+      ender
+        (match unify lvars l r with
+         | None ->
+           if trace_uni then printf "\tUnificated `%a` and `%a`\n" ppw l ppw r;
+           return Stream.nil
+         | Some subst2 ->
+           if trace_uni
+           then
+             printf
+               "\tUnificated `%s` and `%s`\n"
+               (Unit.to_string (ppw Format.std_formatter l))
+               (Unit.to_string (ppw Format.std_formatter r));
+           let* () = put { st with lvars = subst2 } in
+           return (Stream.return subst2))
     | Conde [] -> assert false
     | Conde (x :: xs) ->
-      Js.Unsafe.global##.anyf("||");
+      Js.Unsafe.global##.anyf "||";
       let* st = read in
       List.foldlm
         (fun acc y ->
@@ -426,84 +447,95 @@ let eval ?(trace_svars = false) ?(trace_uni = false) ?(trace_calls = false) =
         (eval x)
         xs
     | Conj [] -> assert false
-    | Conj [ x ] -> 
-      Js.Unsafe.global##.anyf("&&");
+    | Conj [ x ] ->
+      Js.Unsafe.global##.anyf "&&";
       eval x
     | Conj (x :: xs) ->
-      Js.Unsafe.global##.anyf("&&");
+      Js.Unsafe.global##.anyf "&&";
       let* st = read in
-      ender (Stream.bindm (eval x) (fun subst ->
-          put { st with lvars = subst } >>= fun () -> eval (Conj xs)))
+      ender
+        (Stream.bindm (eval x) (fun subst ->
+           put { st with lvars = subst } >>= fun () -> eval (Conj xs)))
     | Fresh (name, rhs) ->
-      Js.Unsafe.global##.freshf(name);
-      let* st = read in
       let term = Value.var (next_logic_var ()) in
+      Js.Unsafe.global##.freshf (Js.string (asprintf "%a" Value.pp term));
+      (*_N переменной*)
+      let* st = read in
+      (* let term = Value.var (next_logic_var ()) in *)
       let svars = VarsMap.add name term st.State.svars in
       let* () = put { st with svars } in
+      (* Js.Unsafe.global##.freshf
+        (Js.string (asprintf "%a" Value.pp term)) *)
       Stream.from_funm (fun () -> eval rhs)
     | Call (fname, args) ->
-      Js.Unsafe.global##.callf([fname, args]);
+      (* Js.Unsafe.global##.callf (Js.string (fname ^ asprintf "%a" Term.pp (termSum args))); *)
+      (*передавать строку*)
+      (*[ fname, args ]; *)
       let* st = read in
       (match VarsMap.find fname st.rels with
-      | exception Not_found -> fail (`UnboundRelation fname)
-      | _, formal_args, body ->
-
-        assert (Stdlib.List.length formal_args = Stdlib.List.length args);
-        (* TODO: let's try to create a new set of syntax variables *)
-        let* walked_args =
-          List.mapm (fun t -> eval_term t >>| Value.walk st.lvars) args
-        in
-        let* new_svars =
-          List.foldl2m
-            (fun acc name v -> return (VarsMap.add name v acc))
-            (return VarsMap.empty)
-            formal_args
-            walked_args
-            ~on_fail:(fail `BadArity)
-        in
-        if trace_calls
-        then (
-          printf
-            "args_itself = [ %a ]\n%!"
-            (VarsMap.pp (fun ppf t -> Value.pp ppf (Value.walk st.lvars t)))
-            new_svars;
-          printf
-            "old_svars = [ %a ]\n%!"
-            (VarsMap.pp (fun ppf t -> Value.pp ppf (Value.walk st.lvars t)))
-            st.svars);
-        let new_svars =
-          VarsMap.merge
-            (fun _k old new_ ->
-              match old, new_ with
-              | _, Some n -> Some n
-              | None, None -> assert false
-              | Some n, None -> Some n)
-            st.svars
-            new_svars
-        in
-        if trace_calls
-        then
-          printf
-            "new_svars = [ %a ]\n%!"
-            (VarsMap.pp (fun ppf t -> Value.pp ppf (Value.walk st.lvars t)))
-            new_svars;
-        let* () = put { st with svars = new_svars } in
-        if trace_calls
-        then
-          printf
-            "\027[0;31mCalling `%s %a`\027[0m\n%!"
-            fname
-            (pp_print_list ~pp_sep:pp_print_space Value.pp)
-            walked_args;
-        eval body >>= fun x -> put_svars st.svars >>= fun () -> return x)
-    and eval_term = function
+       | exception Not_found -> fail (`UnboundRelation fname)
+       | _, formal_args, body ->
+         assert (Stdlib.List.length formal_args = Stdlib.List.length args);
+         (* TODO: let's try to create a new set of syntax variables *)
+         let* walked_args =
+           List.mapm (fun t -> eval_term t >>| Value.walk st.lvars) args
+         in
+         Js.Unsafe.global##.callf
+           (Js.string (fname ^ asprintf "%a" Term.pp (termSum args)));
+         (* (Js.string fname); *)
+         (*тут печатать value строку. pp_print_list*)
+         let* new_svars =
+           List.foldl2m
+             (fun acc name v -> return (VarsMap.add name v acc))
+             (return VarsMap.empty)
+             formal_args
+             walked_args
+             ~on_fail:(fail `BadArity)
+         in
+         if trace_calls
+         then (
+           printf
+             "args_itself = [ %a ]\n%!"
+             (VarsMap.pp (fun ppf t -> Value.pp ppf (Value.walk st.lvars t)))
+             new_svars;
+           printf
+             "old_svars = [ %a ]\n%!"
+             (VarsMap.pp (fun ppf t -> Value.pp ppf (Value.walk st.lvars t)))
+             st.svars);
+         let new_svars =
+           VarsMap.merge
+             (fun _k old new_ ->
+               match old, new_ with
+               | _, Some n -> Some n
+               | None, None -> assert false
+               | Some n, None -> Some n)
+             st.svars
+             new_svars
+         in
+         if trace_calls
+         then
+           printf
+             "new_svars = [ %a ]\n%!"
+             (VarsMap.pp (fun ppf t -> Value.pp ppf (Value.walk st.lvars t)))
+             new_svars;
+         let* () = put { st with svars = new_svars } in
+         if trace_calls
+         then
+           printf
+             "\027[0;31mCalling `%s %a`\027[0m\n%!"
+             fname
+             (pp_print_list ~pp_sep:pp_print_space Value.pp)
+             walked_args;
+         eval body >>= fun x -> put_svars st.svars >>= fun () -> return x)
+  and eval_term = function
     | Nil -> return Value.Nil
     | Symbol s -> return (Value.symbol s)
     | Cons (l, r) -> return Value.cons <*> eval_term l <*> eval_term r
     | Var s ->
       let* next = lookup_var_syntax s in
       (match next with
-      | None -> fail (`UnboundSyntaxVariable s)
-      | Some t2 -> return t2)
-  in eval
+       | None -> fail (`UnboundSyntaxVariable s)
+       | Some t2 -> return t2)
+  in
+  eval
 ;;

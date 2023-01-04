@@ -14,7 +14,6 @@ let pp_magenta ppf = pp_colored Format.std_formatter ppf
 let __ () = pp_magenta "%d" 1
 let __ () = pp_magenta "%s" "a"
 
-
 let appendo_body =
   Conde
     [ Conj [ Unify (Var "xs", Nil); Unify (Var "ys", Var "xys") ]
@@ -36,8 +35,10 @@ let run_appendo () =
   let goal =
     Call
       ( "appendo"
-      , [ Cons (Symbol "a", Cons (Symbol "b", Nil)); Cons (Symbol "c", Cons (Symbol "d", Nil)); Var "xys" ]
-      )
+      , [ Cons (Symbol "a", Cons (Symbol "b", Nil))
+        ; Cons (Symbol "c", Cons (Symbol "d", Nil))
+        ; Var "xys"
+        ] )
   in
   let env =
     State.(
@@ -50,8 +51,9 @@ let run_appendo () =
   Format.printf "@]%!"
 ;;
 
-
 let () =
-  Js.Unsafe.global##.jscode := (object%js
-    method runAppendo = run_appendo
-  end)
+  Js.Unsafe.global##.jscode
+    := object%js
+         method runAppendo = run_appendo
+       end
+;;

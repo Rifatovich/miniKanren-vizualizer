@@ -10,7 +10,7 @@ Window {
     id: root
     title: "miniKanren-vizualizer"
     width: 1280
-    height: 820
+    height: 720
     visible: true
 
     property var tree: null
@@ -25,12 +25,14 @@ Window {
 
     Button {
         id: testButton
-        text: "appendo"
+        text: "result"
         onClicked: {
             if (tree)
-                tree.destroyNodes();
+                tree.viewNodes();
+            else {
             tree = new T.Tree(canvas);
             console.log(Helpers.runAppendo());
+            }
         }
     }
 
@@ -52,8 +54,26 @@ Window {
         }
     }
 
+    Button {
+        id: clearButton
+        text: "clear"
+        anchors.top: nextButton.bottom
+        onClicked: {
+            tree.destroyNodes();
+        }
+    }
+
     ScrollView {
-        ScrollBar.horizontal.policy: ScrollBar.AlwaysOn
+//        ScrollBar.horizontal: ScrollBar {
+//                  policy: ScrollBar.AlwaysOn
+//                  size: 1.0
+//                  pressed: true
+//              }
+        Flickable {
+             contentWidth: 5000
+             ScrollBar.horizontal: ScrollBar { }
+         }
+
         ScrollBar.vertical.policy: ScrollBar.AlwaysOn
         anchors.left: testButton.right
         anchors.right: parent.right
@@ -65,16 +85,10 @@ Window {
         Rectangle {
             id: canvas
             width: parent.width
+            //anchors {horizontalCenter: parent.horizontalCenter}
             height: 4000
-            color: "#ffdc7a"
+            color: "silver"
         }
     }
 
-    Component.onCompleted: {
-
-//      console.log("MiniKanren = " + JSON.stringify(MiniKanren) );
-//      console.log("Helpers = " + JSON.stringify(Helpers) );
-//      console.log("Qt = " + JSON.stringify(Qt) );
-//      console.log( this );
-    }
 }
