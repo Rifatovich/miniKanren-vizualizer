@@ -15,9 +15,5 @@ function, using `Js.Unsafe.global##` calls in `unicanren/lib/lib.ml`
 Then content of `unicanren/_build/default/bin/main.bc.js`  is referenced in Qt project, so building 
 OCaml library is required for successful compilation of Qt/QML frontend.
 
-
-----
-## todo:
-1. Tree doesn't output current variables, it's output only function names
-2. There are counterexamples where the tree is built incorrectly
-3. Tree looks very bad
+## License
+[MIT License](LICENSE)
