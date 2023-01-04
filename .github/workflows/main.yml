@@ -35,4 +35,4 @@ jobs:
       # docker has opam 2.0.x where depext is not yet integrated
       - run: opam depext yojson cohttp lwt websocket-lwt-unix lwt_ppx js_of_ocaml-ppx ppx_inline_test --yes
       - run: opam install yojson cohttp lwt websocket-lwt-unix lwt_ppx js_of_ocaml-ppx ppx_inline_test --yes
-      - run: opam exec -- dune build @default --profile=debug
+      - run: cd unicanren && opam exec -- dune build @default --profile=debug
