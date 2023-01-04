@@ -1,35 +1,38 @@
-name: Main workflow
+name: Build master
 
 on:
-  pull_request:
   push:
-  schedule:
-    # Prime the caches every Monday
-    - cron: 0 1 * * MON
+    branches:
+      - "master"
+
+env:
+  OPAMROOT: /home/opam/.opam
 
 jobs:
   build:
     strategy:
       fail-fast: false
-      matrix:
-        os:
-          - ubuntu-latest
-        ocaml-compiler:
-          - 4.14.0
 
-    runs-on: ${{ matrix.os }}
+    runs-on: ubuntu-latest
+    container:
+      image: ocaml/opam:ubuntu-20.04-ocaml-4.14
+      options: --user root
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Use OCaml ${{ matrix.ocaml-compiler }}
-        uses: ocaml/setup-ocaml@v2
+      - run: opam --version
+      - run: opam exec -- ocamlopt --version
+      - name: Cancel Previous Runs
+        uses: styfle/cancel-workflow-action@0.7.0
         with:
-          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+          access_token: ${{ github.token }}
 
-      - run: opam install . --deps-only --with-test
+      # checking out the code seems to be important because local switch is used
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 1
 
-      - run: opam exec -- dune build
-
-      - run: opam exec -- dune runtest
+      # docker has opam 2.0.x where depext is not yet integrated
+      - run: opam depext yojson cohttp lwt websocket-lwt-unix lwt_ppx js_of_ocaml-ppx ppx_inline_test --yes
+      - run: opam install yojson cohttp lwt websocket-lwt-unix lwt_ppx js_of_ocaml-ppx ppx_inline_test --yes
+      - run: opam exec -- dune build @default --profile=debug
